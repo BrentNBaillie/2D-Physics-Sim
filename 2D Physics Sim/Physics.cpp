@@ -14,7 +14,7 @@ enum NormalTangent {Xn, Yn, Xt, Yt};
 Physics::Physics()
 	: xGravity(0), yGravity(-10.0f), Vx(0), Vy(0), collCoefficient(0.99), dragCoefficient(0), distance(0), dX(0), dY(0), 
 	Unit{ 0,0,0,0 }, BallOneVel{ 0,0,0,0 }, BallTwoVel{ 0,0,0,0 }, oneIsFacing(false), twoIsFacing(false), scale(4), distSqared(0), 
-	gridNav{ {1,-1},{1,0},{1,1},{0,1} }
+	gridNav{ {1,0},{1,1},{0,1},{-1,1} }, loopStart(0), loopEnd(0)
 {}
 
 Physics::~Physics(){}
@@ -69,7 +69,6 @@ void Physics::VelocityVectors(Ball& ball, float(&BallVel)[4])
 	BallVel[Yt] = Unit[Yt] * (ball.Vx * Unit[Xt] + ball.Vy * Unit[Yt]);
 }
 
-//Debug this method. Out of bounds erros.
 void Physics::BallCollide(Grid& grid, vector<Ball>& balls) 
 {
 	for (int i = 0; i < gridSize; i++)
@@ -95,23 +94,44 @@ void Physics::BallCollide(Grid& grid, vector<Ball>& balls)
 					}
 				}
 
-				for (int l = 0; l < 4; l++)
+				if (j == gridSize - 1)
 				{
-					if (grid.countID[i + gridNav[l][0]][j + gridNav[l][1]] == 0)
-					{
-						continue;
-					}
+					loopStart = 0;
+					loopEnd = 0;
+				}
+				else if (i == 0)
+				{
+					loopStart = 0;
+					loopEnd = 2;
+				}
+				else if (i == gridSize - 1)
+				{
+					loopStart = 2;
+					loopEnd = 3;
+				}
 
-					for (int m = 0; m < grid.countID[i + gridNav[l][0]][j + gridNav[l][1]]; m++)
+				if (i != gridSize - 1 && j != gridSize - 1)
+				{
+					for (int l = loopStart; l <= loopEnd; l++)
 					{
-						dX = balls[m].x - balls[k].x;
-						dY = balls[m].y - balls[k].y;
-						distSqared = dX * dX + dY * dY;
-
-						if (distSqared <= ballDiameterSquared)
+						//Out of bounds error
+						if (grid.countID[i + gridNav[l][0]][j + gridNav[l][1]] == 0)
 						{
-							distance = sqrt(distSqared);
-							CalculateBallCollide(balls[k], balls[m]);
+							continue;
+						}
+
+						//Out of bounds error
+						for (int m = 0; m < grid.countID[i + gridNav[l][0]][j + gridNav[l][1]]; m++)
+						{
+							dX = balls[m].x - balls[k].x;
+							dY = balls[m].y - balls[k].y;
+							distSqared = dX * dX + dY * dY;
+
+							if (distSqared <= ballDiameterSquared)
+							{
+								distance = sqrt(distSqared);
+								CalculateBallCollide(balls[k], balls[m]);
+							}
 						}
 					}
 				}

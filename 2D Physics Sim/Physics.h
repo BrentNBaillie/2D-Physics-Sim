@@ -10,6 +10,7 @@ private:
 	float xGravity, yGravity, Vx, Vy, collCoefficient, dragCoefficient, distance, dX, dY, Unit[4], BallOneVel[4], BallTwoVel[4], scale, distSqared;
 	bool oneIsFacing, twoIsFacing;
 	int gridNav[4][2];
+	int loopStart, loopEnd;
 	void UnitVectors();
 	void VelocityVectors(Ball& ball, float(&BallVel)[4]);
 	void CalculateBallCollide(Ball& ballOne, Ball& ballTwo);
