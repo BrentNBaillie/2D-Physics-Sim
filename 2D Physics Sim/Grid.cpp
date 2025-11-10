@@ -1,4 +1,3 @@
-#pragma once
 #include "Grid.h"
 #include "Globals.h"
 #include "Debug.h"
@@ -13,8 +12,11 @@
 
 using namespace std;
 
-Grid::Grid() : grid(gridSize, vector<vector<int>>(gridSize, vector<int>(0))), countID(gridSize, vector<int>(gridSize, 0)), ranges(2, vector<float>(gridSize, 0))
+Grid::Grid() : gridWidth((int)(screenWidth / (6 * ballDiameter))), gridHeight((int)(screenHeight / (6 * ballDiameter))), 
+grid(gridWidth, vector<vector<Ball*>>(gridHeight, vector<Ball*>(0))), ranges(2)
 {
+	ranges[0].resize(gridWidth, 0.0f);
+	ranges[1].resize(gridHeight, 0.0f);
 	InitializeRanges();
 }
 
@@ -22,21 +24,25 @@ Grid::~Grid() {}
 
 void Grid::InitializeRanges()
 {
-	for (int i = 0; i < gridSize; i++)
+	for (int x = 0; x < gridWidth; x++)
 	{
-		ranges[0][i] = (screenWidth / static_cast<float>(gridSize)) * (i + 1);
-		ranges[1][i] = (screenHeight / static_cast<float>(gridSize)) * (i + 1); 
+		ranges[0][x] = (screenWidth / static_cast<float>(gridWidth)) * (x + 1);
+		 
+	}
+	for (int y = 0; y < gridHeight; y++)
+	{
+		ranges[1][y] = (screenHeight / static_cast<float>(gridHeight)) * (y + 1);
 	}
 }
 
 void Grid::ClearGrid()
 {
-	for (int i = 0; i < gridSize; i++)
+	for (int x = 0; x < gridWidth; x++)
 	{
-		for (int j = 0; j < gridSize; j++)
+		for (int y = 0; y < gridHeight; y++)
 		{
-			grid[i][j].clear();
-			countID[i][j] = 0; 
+			grid[x][y].clear();
+
 		}
 	}
 }
@@ -46,16 +52,15 @@ void Grid::UpdateGrid(vector<Ball>& balls)
 	ClearGrid(); 
 	for (Ball& ball : balls)
 	{
-		for (int i = 0; i < gridSize; i++)
+		for (int x = 0; x < gridWidth; x++)
 		{
-			if (ball.x < ranges[0][i])
+			if (ball.position.X < ranges[0][x])
 			{
-				for (int j = 0; j < gridSize; j++)
+				for (int y = 0; y < gridHeight; y++)
 				{
-					if (ball.y < ranges[1][j])
+					if (ball.position.Y < ranges[1][y])
 					{
-						grid[i][j].emplace_back(ball.id);
-						countID[i][j]++;
+						grid[x][y].emplace_back(&ball);
 						break;
 					}
 				}

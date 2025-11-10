@@ -12,8 +12,8 @@ private:
 	void InitializeRanges();
 	void ClearGrid();
 public:
-	vector<vector<vector<int>>> grid;
-	vector<vector<int>> countID;
+	int gridWidth, gridHeight;
+	vector<vector<vector<Ball*>>> grid;
 	Grid();
 	~Grid();
 	void UpdateGrid(vector<Ball>& balls);

@@ -1,18 +1,20 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include "Vect2.h"
 
 class Ball
 {
 private:
-	float velocity, vSquared;
+	float speedSquared;
 	sf::CircleShape circle;
 	sf::Color color;
 	void UpdateColor();
 	void BallVelocitymath();
 public:
-	float x, y, Vx, Vy;
+	Vect2 position, velocity;
+	float speed;
 	int id;
-	Ball(float x, float y, float Vx, float Vy, int id);
+	Ball(Vect2 newPosition, Vect2 newVelocity, int id);
 	~Ball();
 	void DrawBall(sf::RenderWindow& window);
 };

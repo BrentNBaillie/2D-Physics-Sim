@@ -1,6 +1,4 @@
 #pragma once
-
-extern int gridSize;
 extern int ballCount;
 extern float ballRadius;
 extern float ballDiameter;

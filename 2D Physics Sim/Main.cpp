@@ -12,17 +12,16 @@
 #include <iostream>
 #include <cmath>
 #include <chrono>
-#include <Windows.h>
-#include <string>
-#include <conio.h>
 #include <random>
 #include <thread>
+#include <atomic>
+#include <mutex>
 
-using namespace std::chrono;
-using namespace std;
-
-void DrawBallFrame(sf::RenderWindow& window, vector<Ball>& balls);
-void CalculateBallFrame(Physics& physics, DeltaTime& deltaTime, vector<Ball>& balls, Grid& grid);
+void DrawFrame(sf::RenderWindow& window, vector<Ball>& balls);
+void CalculateFrame(Physics& physics, vector<Ball>& balls, Grid& grid);
+std::mutex g_mutex;
+std::atomic_bool isReading{ false };
+std::atomic_bool isSimulating{ true };
 
 int main()
 {
@@ -35,46 +34,49 @@ int main()
     Physics physics;
     vector<Ball> frameOne;
     vector<Ball> frameTwo;
-    DeltaTime deltaTime;
     Grid grid;
+   
 
     for(int i = 0; i < ballCount; i++)
     {
-        frameOne.emplace_back(screenWidth * rand(gen), screenHeight * rand(gen), 100 * rand(gen), 100 * rand(gen), i);
+        frameOne.emplace_back(Vect2(screenWidth * rand(gen), screenHeight * rand(gen)), Vect2(100 * rand(gen), 100 * rand(gen)), i);
     }
 
     frameTwo = frameOne; 
 
     vector<vector<Ball>> frame = {frameOne, frameTwo};
+
+    std::thread physicsThread(CalculateFrame, std::ref(physics), std::ref(frame[1]), std::ref(grid));
     
     while (window.isOpen())
     {
-        auto start = high_resolution_clock::now();
-
         sf::Event event;
         while (window.pollEvent(event))
         {
             if (event.type == sf::Event::Closed)
+            {
                 window.close();
+            }
         }
-
-        window.clear();
-       
-        grid.UpdateGrid(frame[1]);
-        CalculateBallFrame(physics, deltaTime, frame[1], grid);
-        frame[0] = frame[1];
-        DrawBallFrame(window, frame[0]);
         
+        {
+            while (isSimulating.load()) {}
+            isReading.store(true);
+            std::lock_guard<std::mutex> lock(g_mutex);
+            frame[0] = frame[1];
+            isReading.store(false);
+        }
+       
+        window.clear();
+        DrawFrame(window, frame[0]);
         window.display();
-        auto end = high_resolution_clock::now();
-        deltaTime.NewTime(static_cast<float>(duration_cast<microseconds>(end - start).count()) / 1000000.0f);
-        //this_thread::sleep_for(chrono::seconds(2));
     }
+    physicsThread.join();
 
     return 0;
 }
 
-void DrawBallFrame(sf::RenderWindow& window, vector<Ball>& balls)
+void DrawFrame(sf::RenderWindow& window, vector<Ball>& balls)
 {
     for (Ball& ball : balls)
     {
@@ -82,12 +84,18 @@ void DrawBallFrame(sf::RenderWindow& window, vector<Ball>& balls)
     }
 }
 
-void CalculateBallFrame(Physics& physics, DeltaTime& deltaTime, vector<Ball>& balls, Grid& grid)
+void CalculateFrame(Physics& physics, std::vector<Ball>& balls, Grid& grid)
 {
-    for (Ball& ball : balls)
+    DeltaTime deltaTime;
+
+    while (true)
     {
-        physics.WallCollide(ball);
-        physics.BallCollide(grid, balls);
-        physics.UpdatePosition(ball, deltaTime.dT);
+        while(isReading.load()){}
+        isSimulating.store(true);
+        auto start = std::chrono::high_resolution_clock::now();
+        physics.SimulateFrame(balls, grid, deltaTime);
+        auto end = std::chrono::high_resolution_clock::now();
+        deltaTime.NewTime(static_cast<float>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) / 1000000.0f);
+        isSimulating.store(false);
     }
 }

@@ -1,4 +1,3 @@
-#pragma once
 #include <iostream>
 #include <cmath>
 #include "Physics.h"
@@ -6,131 +5,133 @@
 #include "Grid.h"
 #include "Globals.h" 
 #include "Debug.h"
-
-using namespace std;
+#include "Vect2.h"
 
 enum NormalTangent {Xn, Yn, Xt, Yt};
 
 Physics::Physics()
-	: xGravity(0), yGravity(-10.0f), Vx(0), Vy(0), collCoefficient(0.99), dragCoefficient(0), distance(0), dX(0), dY(0), 
-	Unit{ 0,0,0,0 }, BallOneVel{ 0,0,0,0 }, BallTwoVel{ 0,0,0,0 }, oneIsFacing(false), twoIsFacing(false), scale(4), distSqared(0), 
-	gridNav{ {1,0},{1,1},{0,1},{-1,1} }, loopStart(0), loopEnd(0)
+	: gravity(0,-10.0f), velocity(0,0), collCoefficient(0.99), dragCoefficient(0), delta(0,0),
+	Unit{ 0,0,0,0 }, BallOneVel{ 0,0,0,0 }, BallTwoVel{ 0,0,0,0 }, oneIsFacing(false), twoIsFacing(false), scale(10), distSquared(0), 
+	gridNav{ {1,0},{1,1},{0,1},{-1,1} }, loopStart(0), loopEnd(0), distance(0)
 {}
 
 Physics::~Physics(){}
 
 void Physics::UpdatePosition(Ball& ball, float dt)
 {
-	Vx = (xGravity - ball.Vx * dragCoefficient) * dt;
-	Vy = (yGravity - ball.Vy * dragCoefficient) * dt;
-	ball.Vx += Vx * scale;
-	ball.Vy += Vy * scale; 
-	ball.x += (ball.Vx + 0.5 * Vx) * dt * scale; 
-	ball.y += (ball.Vy + 0.5 * Vy) * dt * scale; 
+	velocity.X = (gravity.X - ball.velocity.X * dragCoefficient) * dt;
+	velocity.Y = (gravity.Y - ball.velocity.Y * dragCoefficient) * dt;
+	ball.velocity.X += velocity.X * scale;
+	ball.velocity.Y += velocity.Y * scale; 
+	ball.position.X += (ball.velocity.X + 0.5 * velocity.X) * dt * scale; 
+	ball.position.Y += (ball.velocity.Y + 0.5 * velocity.Y) * dt * scale; 
 }
 
 void Physics::WallCollide(Ball& ball)
 {
-	if (ball.x < ballRadius)
+	if (ball.position.X < ballRadius)
 	{
-		ball.Vx *= -collCoefficient;
-		ball.x = ballRadius;
+		ball.velocity.X *= -collCoefficient;
+		ball.position.X = ballRadius;
 	}
-	else if (ball.x > screenWidth - ballRadius)
+	else if (ball.position.X > screenWidth - ballRadius)
 	{
-		ball.Vx *= -collCoefficient;
-		ball.x = screenWidth - ballRadius;
+		ball.velocity.X *= -collCoefficient;
+		ball.position.X = screenWidth - ballRadius;
 	}
-	if (ball.y > screenHeight - ballRadius)
+	if (ball.position.Y > screenHeight - ballRadius)
 	{
-		ball.Vy *= -collCoefficient;
-		ball.y = screenHeight - ballRadius;
+		ball.velocity.Y *= -collCoefficient;
+		ball.position.Y = screenHeight - ballRadius;
 	}
-	else if (ball.y < ballRadius)
+	else if (ball.position.Y < ballRadius)
 	{
-		ball.Vy *= -collCoefficient;
-		ball.y = ballRadius;
+		ball.velocity.Y *= -collCoefficient;
+		ball.position.Y = ballRadius;
 	}
 }
 
-void Physics::UnitVectors()
+void Physics::SetUnitVectors()
 {
-	Unit[Xn] = dX / distance;
-	Unit[Yn] = dY / distance;
+	delta.Normalize();
+	Unit[Xn] = delta.X;
+	Unit[Yn] = delta.Y;
 	Unit[Xt] = Unit[Yn];
 	Unit[Yt] = -Unit[Xn];
 }
 
-void Physics::VelocityVectors(Ball& ball, float(&BallVel)[4])
+void Physics::SetVelocityVectors(Ball* ball, float(&BallVel)[4])
 {
-	BallVel[Xn] = Unit[Xn] * (ball.Vx * Unit[Xn] + ball.Vy * Unit[Yn]);
-	BallVel[Yn] = Unit[Yn] * (ball.Vx * Unit[Xn] + ball.Vy * Unit[Yn]);
-	BallVel[Xt] = Unit[Xt] * (ball.Vx * Unit[Xt] + ball.Vy * Unit[Yt]);
-	BallVel[Yt] = Unit[Yt] * (ball.Vx * Unit[Xt] + ball.Vy * Unit[Yt]);
+	BallVel[Xn] = Unit[Xn] * (ball->velocity.X * Unit[Xn] + ball->velocity.Y * Unit[Yn]);
+	BallVel[Yn] = Unit[Yn] * (ball->velocity.X * Unit[Xn] + ball->velocity.Y * Unit[Yn]);
+	BallVel[Xt] = Unit[Xt] * (ball->velocity.X * Unit[Xt] + ball->velocity.Y * Unit[Yt]);
+	BallVel[Yt] = Unit[Yt] * (ball->velocity.X * Unit[Xt] + ball->velocity.Y * Unit[Yt]);
 }
 
-void Physics::BallCollide(Grid& grid, vector<Ball>& balls) 
+bool Physics::IsCollided(Ball* ballOne, Ball* ballTwo)
 {
-	for (int i = 0; i < gridSize; i++)
+	delta = ballTwo->position - ballOne->position;
+	distSquared = delta.SquareSum();
+
+	return distSquared <= ballDiameterSquared;
+}
+
+void Physics::CalculateBallCollide(Ball* ballOne, Ball* ballTwo)
+{
+	SetUnitVectors();
+	SetVelocityVectors(ballOne, BallOneVel);
+	SetVelocityVectors(ballTwo, BallTwoVel);
+
+	oneIsFacing = BallOneVel[Xn] * delta.X + BallOneVel[Yn] * delta.Y > 0;
+	twoIsFacing = BallTwoVel[Xn] * delta.X + BallTwoVel[Yn] * delta.Y < 0;
+
+	if ((oneIsFacing && twoIsFacing) ||
+		(oneIsFacing && (BallOneVel[Xn] > BallTwoVel[Xn] || BallOneVel[Yn] > BallTwoVel[Yn])) ||
+		(twoIsFacing && (BallTwoVel[Xn] > BallOneVel[Xn] || BallTwoVel[Yn] > BallOneVel[Yn])))
 	{
-		for (int j = 0; j < gridSize; j++)
+		ballOne->velocity.X = (collCoefficient * BallTwoVel[Xn]) + BallOneVel[Xt];
+		ballOne->velocity.Y = (collCoefficient * BallTwoVel[Yn]) + BallOneVel[Yt];
+		ballTwo->velocity.X = (collCoefficient * BallOneVel[Xn]) + BallTwoVel[Xt];
+		ballTwo->velocity.Y = (collCoefficient * BallOneVel[Yn]) + BallTwoVel[Yt];
+	}
+}
+
+void Physics::BallCollide(Grid& grid)
+{
+	for (int x = 0; x < grid.gridWidth; x++)
+	{
+		for (int y = 0; y < grid.gridHeight; y++)
 		{
-			if (grid.countID[i][j] == 0)
+			if (grid.grid[x][y].size() == 0)
 			{
 				continue;
 			}
-			for (int k = 0; k < grid.countID[i][j]; k++)
+			else
 			{
-				for (int l = k + 1; l < grid.countID[i][j]; l++)
+				for (int i = 0; i < grid.grid[x][y].size() - 1; i++)
 				{
-					dX = balls[l].x - balls[k].x;
-					dY = balls[l].y - balls[k].y;
-					distSqared = dX * dX + dY * dY;
-
-					if (distSqared <= ballDiameterSquared)
+					for (int j = i + 1; j < grid.grid[x][y].size(); j++)
 					{
-						distance = sqrt(distSqared);
-						CalculateBallCollide(balls[k], balls[l]);
+						if (IsCollided(grid.grid[x][y][i], grid.grid[x][y][j]))
+						{
+							CalculateBallCollide(grid.grid[x][y][i], grid.grid[x][y][j]);
+						}
 					}
-				}
-
-				if (j == gridSize - 1)
-				{
-					loopStart = 0;
-					loopEnd = 0;
-				}
-				else if (i == 0)
-				{
-					loopStart = 0;
-					loopEnd = 2;
-				}
-				else if (i == gridSize - 1)
-				{
-					loopStart = 2;
-					loopEnd = 3;
-				}
-
-				if (i != gridSize - 1 && j != gridSize - 1)
-				{
-					for (int l = loopStart; l <= loopEnd; l++)
+					for (int cell = 0; cell < 4; cell++)
 					{
-						//Out of bounds error
-						if (grid.countID[i + gridNav[l][0]][j + gridNav[l][1]] == 0)
+						int cell_x = x + gridNav[cell][0];
+						int cell_y = y + gridNav[cell][1];
+
+						if (cell_x == grid.gridWidth || cell_x < 0 || cell_y == grid.gridHeight || cell_y < 0 || !grid.grid[cell_x][cell_y].size())
 						{
 							continue;
 						}
 
-						//Out of bounds error
-						for (int m = 0; m < grid.countID[i + gridNav[l][0]][j + gridNav[l][1]]; m++)
+						for (int j = 0; j < grid.grid[cell_x][cell_y].size(); j++)
 						{
-							dX = balls[m].x - balls[k].x;
-							dY = balls[m].y - balls[k].y;
-							distSqared = dX * dX + dY * dY;
-
-							if (distSqared <= ballDiameterSquared)
+							if (IsCollided(grid.grid[x][y][i], grid.grid[cell_x][cell_y][j]))
 							{
-								distance = sqrt(distSqared);
-								CalculateBallCollide(balls[k], balls[m]);
+								CalculateBallCollide(grid.grid[x][y][i], grid.grid[cell_x][cell_y][j]);
 							}
 						}
 					}
@@ -140,23 +141,14 @@ void Physics::BallCollide(Grid& grid, vector<Ball>& balls)
 	}
 }
 
-void Physics::CalculateBallCollide(Ball& ballOne, Ball& ballTwo)
+void Physics::SimulateFrame(std::vector<Ball>& balls, Grid& grid, DeltaTime& deltaTime)
 {
-	UnitVectors();
-	VelocityVectors(ballOne, BallOneVel);
-	VelocityVectors(ballTwo, BallTwoVel);
+	grid.UpdateGrid(balls);
 
-	oneIsFacing = BallOneVel[Xn] * dX + BallOneVel[Yn] * dY > 0;
-	twoIsFacing = BallTwoVel[Xn] * dX + BallTwoVel[Yn] * dY < 0;
-
-	if ((oneIsFacing && twoIsFacing) ||
-		(oneIsFacing && (BallOneVel[Xn] > BallTwoVel[Xn] || BallOneVel[Yn] > BallTwoVel[Yn])) ||
-		(twoIsFacing && (BallTwoVel[Xn] > BallOneVel[Xn] || BallTwoVel[Yn] > BallOneVel[Yn])))
+	for (Ball& ball : balls)
 	{
-		ballOne.Vx = (collCoefficient * BallTwoVel[Xn]) + BallOneVel[Xt];
-		ballOne.Vy = (collCoefficient * BallTwoVel[Yn]) + BallOneVel[Yt];
-		ballTwo.Vx = (collCoefficient * BallOneVel[Xn]) + BallTwoVel[Xt];
-		ballTwo.Vy = (collCoefficient * BallOneVel[Yn]) + BallTwoVel[Yt];
+		WallCollide(ball);
+		BallCollide(grid);
+		UpdatePosition(ball, deltaTime.dT);
 	}
 }
-

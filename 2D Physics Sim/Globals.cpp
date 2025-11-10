@@ -1,7 +1,6 @@
-#pragma once
 #include "globals.h"
+#include <cmath>
 
-int gridSize = 2;
 int ballCount = 20;
 float ballRadius = 20;
 float ballDiameter = ballRadius * 2;
