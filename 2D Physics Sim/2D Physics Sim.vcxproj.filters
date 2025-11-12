@@ -39,6 +39,9 @@
     <ClCompile Include="Vect2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Cleaner.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Ball.h">
@@ -60,6 +63,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vect2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Cleaner.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -27,7 +27,6 @@ void Grid::InitializeRanges()
 	for (int x = 0; x < gridWidth; x++)
 	{
 		ranges[0][x] = (screenWidth / static_cast<float>(gridWidth)) * (x + 1);
-		 
 	}
 	for (int y = 0; y < gridHeight; y++)
 	{
@@ -42,7 +41,6 @@ void Grid::ClearGrid()
 		for (int y = 0; y < gridHeight; y++)
 		{
 			grid[x][y].clear();
-
 		}
 	}
 }

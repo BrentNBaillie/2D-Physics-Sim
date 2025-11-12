@@ -19,6 +19,7 @@ private:
 	void BallCollide(Grid& grid);
 	void UpdatePosition(Ball& ball, float dt);
 	void WallCollide(Ball& ball);
+	void Shift(Ball* ballOne, Ball* ballTwo);
 public:
 	Physics();
 	~Physics();

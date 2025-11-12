@@ -7,6 +7,7 @@
 #include "DeltaTime.h"
 #include "Grid.h"
 #include "Debug.h"
+#include "Cleaner.h"
 
 #include <vector>
 #include <iostream>
@@ -19,6 +20,7 @@
 
 void DrawFrame(sf::RenderWindow& window, vector<Ball>& balls);
 void CalculateFrame(Physics& physics, vector<Ball>& balls, Grid& grid);
+void SpaceBalls(Grid& grid);
 std::mutex g_mutex;
 std::atomic_bool isReading{ false };
 std::atomic_bool isSimulating{ true };
@@ -87,6 +89,7 @@ void DrawFrame(sf::RenderWindow& window, vector<Ball>& balls)
 void CalculateFrame(Physics& physics, std::vector<Ball>& balls, Grid& grid)
 {
     DeltaTime deltaTime;
+    Cleaner cleaner;
 
     while (true)
     {
@@ -96,6 +99,7 @@ void CalculateFrame(Physics& physics, std::vector<Ball>& balls, Grid& grid)
         physics.SimulateFrame(balls, grid, deltaTime);
         auto end = std::chrono::high_resolution_clock::now();
         deltaTime.NewTime(static_cast<float>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) / 1000000.0f);
+        cleaner.CleanSpace(grid, 8);
         isSimulating.store(false);
     }
 }

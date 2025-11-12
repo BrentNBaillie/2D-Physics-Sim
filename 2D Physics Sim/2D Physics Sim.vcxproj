@@ -140,6 +140,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Ball.cpp" />
+    <ClCompile Include="Cleaner.cpp" />
     <ClCompile Include="Debug.cpp" />
     <ClCompile Include="DeltaTime.cpp" />
     <ClCompile Include="Globals.cpp" />
@@ -150,6 +151,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Ball.h" />
+    <ClInclude Include="Cleaner.h" />
     <ClInclude Include="Debug.h" />
     <ClInclude Include="DeltaTime.h" />
     <ClInclude Include="Globals.h" />

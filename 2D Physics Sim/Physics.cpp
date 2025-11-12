@@ -10,7 +10,7 @@
 enum NormalTangent {Xn, Yn, Xt, Yt};
 
 Physics::Physics()
-	: gravity(0,-10.0f), velocity(0,0), collCoefficient(0.99), dragCoefficient(0), delta(0,0),
+	: gravity(0,-10.0f), velocity(0,0), collCoefficient(0.9f), dragCoefficient(0), delta(0,0),
 	Unit{ 0,0,0,0 }, BallOneVel{ 0,0,0,0 }, BallTwoVel{ 0,0,0,0 }, oneIsFacing(false), twoIsFacing(false), scale(10), distSquared(0), 
 	gridNav{ {1,0},{1,1},{0,1},{-1,1} }, loopStart(0), loopEnd(0), distance(0)
 {}
@@ -96,6 +96,17 @@ void Physics::CalculateBallCollide(Ball* ballOne, Ball* ballTwo)
 	}
 }
 
+void Physics::Shift(Ball* ballOne, Ball* ballTwo)
+{
+	Vect2 delta = ballTwo->position - ballOne->position;
+	delta /= 2.0f;
+	Vect2 midpoint = ballOne->position + delta;
+	delta.Normalize();
+
+	ballTwo->position = midpoint + delta * ballRadius;
+	ballOne->position = midpoint - delta * ballRadius;
+}
+
 void Physics::BallCollide(Grid& grid)
 {
 	for (int x = 0; x < grid.gridWidth; x++)
@@ -108,13 +119,14 @@ void Physics::BallCollide(Grid& grid)
 			}
 			else
 			{
-				for (int i = 0; i < grid.grid[x][y].size() - 1; i++)
+				for (int i = 0; i < grid.grid[x][y].size(); i++)
 				{
 					for (int j = i + 1; j < grid.grid[x][y].size(); j++)
 					{
 						if (IsCollided(grid.grid[x][y][i], grid.grid[x][y][j]))
 						{
 							CalculateBallCollide(grid.grid[x][y][i], grid.grid[x][y][j]);
+							Shift(grid.grid[x][y][i], grid.grid[x][y][j]);
 						}
 					}
 					for (int cell = 0; cell < 4; cell++)
@@ -132,6 +144,7 @@ void Physics::BallCollide(Grid& grid)
 							if (IsCollided(grid.grid[x][y][i], grid.grid[cell_x][cell_y][j]))
 							{
 								CalculateBallCollide(grid.grid[x][y][i], grid.grid[cell_x][cell_y][j]);
+								Shift(grid.grid[x][y][i], grid.grid[cell_x][cell_y][j]);
 							}
 						}
 					}
